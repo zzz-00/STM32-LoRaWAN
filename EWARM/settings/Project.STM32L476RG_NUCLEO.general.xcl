@@ -1,0 +1,15 @@
+"F:\CodeSoft\IAR\Iar822\Soft\arm\bin\armproc.dll" 
+
+"F:\CodeSoft\IAR\Iar822\Soft\arm\bin\armstlink2.dll" 
+
+"G:\lierda\pro\ATCmd_TestAuto\LoRaWAN_Experiment\EWARM\STM32L476RG_NUCLEO\Exe\Project.out" 
+
+--plugin "F:\CodeSoft\IAR\Iar822\Soft\arm\bin\armbat.dll" 
+
+--device_macro "F:\CodeSoft\IAR\Iar822\Soft\arm\config\debugger\ST\STM32L4xx.dmac" 
+
+--flash_loader "F:\CodeSoft\IAR\Iar822\Soft\arm\config\flashloader\ST\FlashSTM32L4AxxG.board" 
+
+
+
+
