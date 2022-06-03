@@ -1,0 +1,6 @@
+# User-specific uVision Keil files
+/DebugConfig
+/STM32L476VG_DB
+JLinkLog.txt
+JLinkSettings.ini
+*.uvguix*

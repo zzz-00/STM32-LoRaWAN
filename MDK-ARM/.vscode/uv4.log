@@ -1,0 +1,7 @@
+*** Using Compiler 'V5.06 update 7 (build 960)', folder: 'D:\software\Keil_v5\ARM\ARMCC\Bin'
+Build target 'LR_TRAIN'
+compiling app.c...
+linking...
+Program Size: Code=34592 RO-data=5160 RW-data=116 ZI-data=16692  
+".\STM32L476VG_DB\SW_KFB.axf" - 0 Error(s), 0 Warning(s).
+Build Time Elapsed:  00:00:03
