@@ -112,6 +112,7 @@ void LoRaWAN_Func_Process(void)
             }
             config_flag = 1;
         }
+        
     }
     break;
 

@@ -7,7 +7,6 @@
                 "d:\\project\\stm32\\STM32-LoRaWAN\\Drivers\\CMSIS\\Device\\ST\\STM32L4xx\\Include",
                 "d:\\project\\stm32\\STM32-LoRaWAN\\Drivers\\STM32L4xx_HAL_Driver\\Inc",
                 "d:\\project\\stm32\\STM32-LoRaWAN\\Drivers\\EEPROM\\Core",
-                "d:\\project\\stm32\\STM32-LoRaWAN\\Drivers\\EEPROM\\Porting\\STM32L4",
                 "d:\\project\\stm32\\STM32-LoRaWAN\\inc\\board",
                 "d:\\project\\stm32\\STM32-LoRaWAN\\inc\\common",
                 "d:\\project\\stm32\\STM32-LoRaWAN\\inc\\mcu",

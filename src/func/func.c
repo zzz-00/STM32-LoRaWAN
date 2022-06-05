@@ -1,9 +1,19 @@
 #include "func.h"
 #include "usart.h"
+#include "ST7789v.h"
 #include "lorawan_node_driver.h"
 
 void Device_Config(void)
 {
+    // ÃðµÆ
+    HAL_GPIO_WritePin(LedGpio_D6, LedPin_D6, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(LedGpio_D7, LedPin_D7, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(LedGpio_D8, LedPin_D8, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(LedGpio_D11, LedPin_D11, GPIO_PIN_RESET);
+
+    // Çå³ýÆÁÄ»
+    LCD_Clear(WHITE);
+
     // ÅäÖÃÎªClassA
     nodeCmdConfig("AT+CLASS=0");
     debug_printf("AT+CLASS=0\r\n");

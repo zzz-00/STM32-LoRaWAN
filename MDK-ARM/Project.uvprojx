@@ -339,7 +339,7 @@
               <MiscControls>--C99</MiscControls>
               <Define>STM32L476xx,USE_HAL_DRIVER</Define>
               <Undefine></Undefine>
-              <IncludePath>..\Drivers\CMSIS\Include;..\Drivers\CMSIS\Device\ST\STM32L4xx\Include;..\Drivers\STM32L4xx_HAL_Driver\Inc;..\Drivers\EEPROM\Core;..\Drivers\EEPROM\Porting\STM32L4;..\inc\board;..\inc\common;..\inc\mcu;..\inc;..\inc\board\sensors;..\inc\board\lcd;..\src\func</IncludePath>
+              <IncludePath>..\Drivers\CMSIS\Include;..\Drivers\CMSIS\Device\ST\STM32L4xx\Include;..\Drivers\STM32L4xx_HAL_Driver\Inc;..\Drivers\EEPROM\Core;..\inc\board;..\inc\common;..\inc\mcu;..\inc;..\inc\board\sensors;..\inc\board\lcd;..\src\func</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
