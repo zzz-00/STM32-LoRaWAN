@@ -13,6 +13,7 @@ void Device_Config(void)
 
     // Çå³ýÆÁÄ»
     LCD_Clear(WHITE);
+    LCD_ShowString(10, 10, "DevEui:009569000000F586", BLUE);
 
     // ÅäÖÃÎªClassA
     nodeCmdConfig("AT+CLASS=0");
@@ -77,4 +78,67 @@ int my_atoi(uint8_t *str)
     }
 
     return sum * (flag ? -1 : 1);
+}
+
+double Cal_success_rate(recv_data data[], uint8_t cnt, uint8_t flag)
+{
+    double sum = 0;
+    switch (flag)
+    {
+    case 0:
+    {
+        for (int i = 0; i < cnt; i++)
+        {
+            sum += data[i].state;
+        }
+        sum = sum / cnt * 1.0;
+    }
+    break;
+
+    case 1:
+    {
+        for (int i = 0; i < 20; i++)
+        {
+            sum += data[i].state;
+        }
+        sum = sum / 20 * 1.0;
+    }
+    break;
+
+    default:
+        break;
+    }
+    return sum;
+}
+
+double Cal_average_RSSI(recv_data data[], uint8_t cnt, uint8_t flag)
+{
+    double sum = 0;
+    switch (flag)
+    {
+    case 0:
+    {
+        for (int i = 0; i < cnt; i++)
+        {
+            sum += data[i].rssi;
+        }
+        sum = sum / cnt * 1.0;
+    }
+
+    break;
+    case 1:
+    {
+        for (int i = 0; i < 20; i++)
+        {
+            sum += data[i].rssi;
+        }
+        sum = sum / 20 * 1.0;
+    }
+
+    break;
+
+    default:
+        break;
+    }
+    return sum;
 }

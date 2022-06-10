@@ -6,6 +6,11 @@
         "tim.h": "c",
         "common.h": "c",
         "*.tcc": "c",
-        "cstdio": "c"
+        "cstdio": "c",
+        "st7789v.h": "c",
+        "lorawan_node_driver.h": "c",
+        "stm32l4xx_hal.h": "c",
+        "stm32l4xx_hal_conf.h": "c",
+        "usart.h": "c"
     }
 }
