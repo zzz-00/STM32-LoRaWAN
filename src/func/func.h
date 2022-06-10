@@ -6,6 +6,8 @@ typedef struct
     int rssi;
     int snr;
     char success_flag;
+    int UpCnt;
+    int DnCnt;
 } recv_data;
 
 void Device_Config(void);

@@ -19,9 +19,8 @@ uint32_t tim6_cnt = 0;
 uint8_t send_cnt = 0;
 uint8_t full_flag = 0;
 
-uint8_t *str;
-uint8_t RSSI[5];
-uint8_t SNR[4];
+uint8_t str[20] = {0};
+double loss_tolerance = 0;
 
 recv_data signal_quality_monitor[20] = {0};
 
@@ -137,25 +136,50 @@ void LoRaWAN_Func_Process(void)
             usart2_send_data(UART_TO_LRM_RECEIVE_BUFFER, UART_TO_LRM_RECEIVE_LENGTH);
             HAL_GPIO_WritePin(LedGpio_D6, LedPin_D6, GPIO_PIN_SET);
 
-            str = find_string(UART_TO_LRM_RECEIVE_BUFFER, "pRSSI:"); // 获取RSSI
+            /* 下行数据处理 */
+            match_string(UART_TO_LRM_RECEIVE_BUFFER, "UpCnt:", ",", str); // 获取UpCnt
             if (str != NULL)
             {
-                memcpy(RSSI, str, 4);
-                RSSI[4] = '\0';
-                signal_quality_monitor[send_cnt].rssi = my_atoi(RSSI);
-                debug_printf("RSSI:%d\r\n", signal_quality_monitor[send_cnt].rssi);
+                signal_quality_monitor[send_cnt - 1].UpCnt = my_atoi(str);
+                debug_printf("UpCnt:%d\r\n", signal_quality_monitor[send_cnt - 1].UpCnt);
             }
+            memset(str, 0, sizeof(str));
 
-            str = find_string(UART_TO_LRM_RECEIVE_BUFFER, "SNR:"); // 获取SNR
+            match_string(UART_TO_LRM_RECEIVE_BUFFER, "DnCnt:", ",", str); // 获取DnCnt
             if (str != NULL)
             {
-                memcpy(SNR, str, 3);
-                SNR[3] = '\0';
-                signal_quality_monitor[send_cnt].snr = my_atoi(SNR);
-                debug_printf("SNR:%d\r\n", signal_quality_monitor[send_cnt].snr);
+                signal_quality_monitor[send_cnt - 1].DnCnt = my_atoi(str);
+                debug_printf("DnCnt:%d\r\n", signal_quality_monitor[send_cnt - 1].DnCnt);
             }
+            memset(str, 0, sizeof(str));
 
-            signal_quality_monitor[send_cnt].success_flag = 1;
+            match_string(UART_TO_LRM_RECEIVE_BUFFER, "pRSSI:", ",", str); // 获取RSSI
+            if (str != NULL)
+            {
+                signal_quality_monitor[send_cnt - 1].rssi = my_atoi(str);
+                debug_printf("RSSI:%d\r\n", signal_quality_monitor[send_cnt - 1].rssi);
+            }
+            memset(str, 0, sizeof(str));
+
+            match_string(UART_TO_LRM_RECEIVE_BUFFER, "SNR:", ",", str); // 获取SNR
+            if (str != NULL)
+            {
+                signal_quality_monitor[send_cnt - 1].snr = my_atoi(str);
+                debug_printf("SNR:%d\r\n", signal_quality_monitor[send_cnt - 1].snr);
+            }
+            memset(str, 0, sizeof(str));
+
+            loss_tolerance = (signal_quality_monitor[send_cnt - 1].UpCnt - signal_quality_monitor[send_cnt - 1].DnCnt) / signal_quality_monitor[send_cnt - 1].UpCnt * 1.00; // 丢包率计算
+            if (loss_tolerance > 0.1)
+            {
+                HAL_GPIO_WritePin(LedGpio_D7, LedPin_D7, GPIO_PIN_RESET);
+            }
+            else
+            {
+                HAL_GPIO_WritePin(LedGpio_D8, LedPin_D8, GPIO_PIN_RESET);
+            }
+            debug_printf("loss tolerance:%.2f\r\n", loss_tolerance);
+            signal_quality_monitor[send_cnt - 1].success_flag = 1;
         }
     }
     break;
@@ -199,16 +223,16 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *tim_BaseHandle)
                 lpusart1_send_data(empty_data, sizeof(empty_data));
                 HAL_GPIO_WritePin(LedGpio_D6, LedPin_D6, GPIO_PIN_RESET);
                 correspond_flag = 1;
-                send_cnt++;
-                if (send_cnt < 19)
+                if (send_cnt < 20)
                 {
                     send_cnt++;
                 }
                 else
                 {
-                    send_cnt = 0;
-                    full_flag = 1;
+                    send_cnt = 1;
+                    full_flag = 1; // 计满20次标志位
                 }
+                debug_printf("%d\r\n", send_cnt);
                 tim6_cnt = 0;
             }
         }
