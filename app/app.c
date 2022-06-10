@@ -6,10 +6,24 @@
 #include "hdc1000.h"
 #include "sensors_test.h"
 #include "func.h"
+#include "tim.h"
+#include "common.h"
 
 extern DEVICE_MODE_T device_mode;
 extern DEVICE_MODE_T *Device_Mode_str;
 down_list_t *pphead = NULL;
+
+uint8_t empty_data[9] = {0xAA, 0, 0, 0, 0, 0, 0, 0, 0x0F};
+uint8_t correspond_flag = 0;
+uint32_t tim6_cnt = 0;
+uint8_t send_cnt = 0;
+uint8_t full_flag = 0;
+
+uint8_t *str;
+uint8_t RSSI[5];
+uint8_t SNR[4];
+
+recv_data signal_quality_monitor[20] = {0};
 
 //-----------------Users application--------------------------
 void LoRaWAN_Func_Process(void)
@@ -110,9 +124,39 @@ void LoRaWAN_Func_Process(void)
             {
                 return;
             }
+            Tim6_Conf(100);
+            HAL_TIM_Base_Start_IT(&htim6);
             config_flag = 1;
         }
-        
+
+        /* 等待lpuart1产生中断 */
+        if (UART_TO_LRM_RECEIVE_FLAG)
+        {
+            UART_TO_LRM_RECEIVE_FLAG = 0;
+            correspond_flag = 0;
+            usart2_send_data(UART_TO_LRM_RECEIVE_BUFFER, UART_TO_LRM_RECEIVE_LENGTH);
+            HAL_GPIO_WritePin(LedGpio_D6, LedPin_D6, GPIO_PIN_SET);
+
+            str = find_string(UART_TO_LRM_RECEIVE_BUFFER, "pRSSI:"); // 获取RSSI
+            if (str != NULL)
+            {
+                memcpy(RSSI, str, 4);
+                RSSI[4] = '\0';
+                signal_quality_monitor[send_cnt].rssi = my_atoi(RSSI);
+                debug_printf("RSSI:%d\r\n", signal_quality_monitor[send_cnt].rssi);
+            }
+
+            str = find_string(UART_TO_LRM_RECEIVE_BUFFER, "SNR:"); // 获取SNR
+            if (str != NULL)
+            {
+                memcpy(SNR, str, 3);
+                SNR[3] = '\0';
+                signal_quality_monitor[send_cnt].snr = my_atoi(SNR);
+                debug_printf("SNR:%d\r\n", signal_quality_monitor[send_cnt].snr);
+            }
+
+            signal_quality_monitor[send_cnt].success_flag = 1;
+        }
     }
     break;
 
@@ -140,4 +184,33 @@ void LoRaWAN_Borad_Info_Print(void)
     LEDALL_ON;
     HAL_Delay(100);
     LEDALL_OFF;
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *tim_BaseHandle)
+{
+    if (tim_BaseHandle->Instance == TIM6)
+    {
+        tim6_cnt++;
+        if (tim6_cnt == 60)
+        {
+            if (correspond_flag == 0)
+            {
+                debug_printf("send data\r\n");
+                lpusart1_send_data(empty_data, sizeof(empty_data));
+                HAL_GPIO_WritePin(LedGpio_D6, LedPin_D6, GPIO_PIN_RESET);
+                correspond_flag = 1;
+                send_cnt++;
+                if (send_cnt < 19)
+                {
+                    send_cnt++;
+                }
+                else
+                {
+                    send_cnt = 0;
+                    full_flag = 1;
+                }
+                tim6_cnt = 0;
+            }
+        }
+    }
 }

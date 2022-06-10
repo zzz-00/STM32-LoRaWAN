@@ -1,5 +1,11 @@
 {
     "files.associations": {
-        "func.h": "c"
+        "func.h": "c",
+        "main.h": "c",
+        "app.h": "c",
+        "tim.h": "c",
+        "common.h": "c",
+        "*.tcc": "c",
+        "cstdio": "c"
     }
 }

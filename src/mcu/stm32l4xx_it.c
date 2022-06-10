@@ -44,7 +44,7 @@ extern DMA_HandleTypeDef hdma_usart1_rx;
 extern DMA_HandleTypeDef hdma_usart2_rx;
 extern UART_HandleTypeDef huart1;
 extern UART_HandleTypeDef huart2;
-extern TIM_HandleTypeDef TIM6_InitStruct;
+extern TIM_HandleTypeDef htim6;
 //extern RTC_HandleTypeDef hrtc;
 //extern TIM_HandleTypeDef  TimHandle;
 
@@ -198,7 +198,7 @@ void SysTick_Handler(void)
 /* USER CODE BEGIN 1 */
 void TIM6_IRQHandler(void)
 {
-    HAL_TIM_IRQHandler(&TIM6_InitStruct);
+    HAL_TIM_IRQHandler(&htim6);
 }
 /******************************************************************************/
 /* STM32L4xx Peripheral Interrupt Handlers                                    */

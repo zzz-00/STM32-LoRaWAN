@@ -39,24 +39,37 @@
 
 /* USER CODE END 0 */
 
-TIM_HandleTypeDef TIM6_InitStruct;
+TIM_HandleTypeDef htim6;
 TIM_HandleTypeDef htim15;
 
 /* TIM6 init function */
 // time ·¶Î§£º0~6000
 void Tim6_Conf(uint16_t time)
 {
-    TIM6_InitStruct.Instance = TIM6;
+    TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+    TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+    htim6.Instance = TIM6;
     uint32_t uwPrescalerValue = (uint32_t)(SYSCLOCK_FREQ / BASE_TIM_10000HZ - 1); // Compute the prescaler value to have TIMx counter clock equal to 10 Hz
-    TIM6_InitStruct.Init.Period = time * 10 - 1;
-    TIM6_InitStruct.Init.Prescaler = uwPrescalerValue;
-    TIM6_InitStruct.Init.ClockDivision = 0;
-    TIM6_InitStruct.Init.CounterMode = TIM_COUNTERMODE_UP;
-    if (HAL_TIM_Base_Init(&TIM6_InitStruct) != HAL_OK)
+    htim6.Init.Period = time * 10 - 1;
+    htim6.Init.Prescaler = uwPrescalerValue; // 8000 - 1
+    htim6.Init.ClockDivision = 0;
+    htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
+    htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+    if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
     {
-        while (1)
-        {
-        }
+        Error_Handler();
+    }
+    sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+    if (HAL_TIM_ConfigClockSource(&htim6, &sClockSourceConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+    sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+    if (HAL_TIMEx_MasterConfigSynchronization(&htim6, &sMasterConfig) != HAL_OK)
+    {
+        Error_Handler();
     }
 }
 
