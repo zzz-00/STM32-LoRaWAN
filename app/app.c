@@ -16,26 +16,31 @@ extern DEVICE_MODE_T *Device_Mode_str;
 down_list_t *pphead = NULL;
 
 uint8_t empty_data[9] = {0xAA, 0, 0, 0, 0, 0, 0, 0, 0x0F};
-uint8_t correspond_flag = 0;
+uint64_t UpCnt = 0;
+uint64_t DnCnt = 0;
 uint32_t tim6_cnt = 0;
-uint32_t total_cnt = 0;
-uint8_t send_cnt = 0;
-uint8_t full_flag = 0;
-uint8_t success_flag = 2;
+uint8_t RSSI_cnt = 0;
+uint8_t correspond_cnt = 0;
+
+uint8_t RSSI_full_flag = 0;
+uint8_t correspond_full_flag = 0;
+uint8_t success_flag = 3;
+uint8_t *p_correspond_flag = NULL;
 
 uint8_t str[20] = {0};
-int UpCnt = 0;
-int DnCnt = 0;
+int RSSI[10] = {0};
+int SNR = 0;
+uint8_t correspond_state[20] = {0};
+
 double loss_tolerance = 0;
 double correspond_success_rate = 0;
 double average_RSSI = 0;
-uint8_t loss_tolerance_s[30];
-uint8_t correspond_success_rate_s[30];
-uint8_t average_RSSI_s[30];
-uint8_t RSSI[30];
-uint8_t SNR[30];
 
-recv_data signal_quality_monitor[20] = {0};
+uint8_t s_loss_tolerance[30];
+uint8_t s_correspond_success_rate[30];
+uint8_t s_average_RSSI[30];
+uint8_t s_RSSI[30];
+uint8_t s_SNR[30];
 
 //-----------------Users application--------------------------
 void LoRaWAN_Func_Process(void)
@@ -146,79 +151,105 @@ void LoRaWAN_Func_Process(void)
         {
             UART_TO_LRM_RECEIVE_FLAG = 0;
             LCD_Fill(10, 50, 240, 149, WHITE);
-            correspond_flag = 0;
+
+            /* 通信计数 */
+            if (correspond_cnt < 20)
+            {
+                correspond_cnt++;
+            }
+            else
+            {
+                correspond_cnt = 1;
+                correspond_full_flag = 1; // 计满20次标志位
+            }
+            UpCnt++;
+
             usart2_send_data(UART_TO_LRM_RECEIVE_BUFFER, UART_TO_LRM_RECEIVE_LENGTH);
+
+            p_correspond_flag = find_string(UART_TO_LRM_RECEIVE_BUFFER, "DN");
+            if (p_correspond_flag != NULL) // 检测到下行数据
+            {
+                /* RSSI计数 */
+                if (RSSI_cnt < 10)
+                {
+                    RSSI_cnt++;
+                }
+                else
+                {
+                    RSSI_cnt = 1;
+                    RSSI_full_flag = 1; // 计满10次标志位
+                }
+
+                /* 下行数据处理 */
+                match_string(UART_TO_LRM_RECEIVE_BUFFER, "pRSSI:", ",", str); // 获取RSSI
+                if (str[0] != '\0')
+                {
+                    RSSI[RSSI_cnt - 1] = my_atoi(str);
+                    debug_printf("RSSI:%d\r\n", RSSI[RSSI_cnt - 1]);
+                }
+                sprintf((char *)s_RSSI, "RSSI:%d", RSSI[RSSI_cnt - 1]);
+                memset(str, 0, sizeof(str));
+
+                match_string(UART_TO_LRM_RECEIVE_BUFFER, "SNR:", ",", str); // 获取SNR
+                if (str[0] != '\0')
+                {
+                    SNR = my_atoi(str);
+                    debug_printf("SNR:%d\r\n", SNR);
+                }
+                sprintf((char *)s_SNR, "SNR:%d", SNR);
+                memset(str, 0, sizeof(str));
+
+                DnCnt++;
+                correspond_state[correspond_cnt - 1] = 1;
+                success_flag = 1; // 本次通信成功
+            }
+            else // 无下行数据
+            {
+                correspond_state[correspond_cnt - 1] = 0;
+                sprintf((char *)s_RSSI, "RSSI:---");
+                sprintf((char *)s_SNR, "SNR:---");
+                success_flag = 0;
+            }
             HAL_GPIO_WritePin(LedGpio_D6, LedPin_D6, GPIO_PIN_SET);
-
-            /* 下行数据处理 */
-            match_string(UART_TO_LRM_RECEIVE_BUFFER, "UpCnt:", ",", str); // 获取UpCnt
-            if (str != NULL)
-            {
-                UpCnt = my_atoi(str);
-                debug_printf("UpCnt:%d\r\n", UpCnt);
-            }
-            memset(str, 0, sizeof(str));
-
-            match_string(UART_TO_LRM_RECEIVE_BUFFER, "DnCnt:", ",", str); // 获取DnCnt
-            if (str != NULL)
-            {
-                DnCnt = my_atoi(str);
-                debug_printf("DnCnt:%d\r\n", DnCnt);
-            }
-            memset(str, 0, sizeof(str));
-
-            match_string(UART_TO_LRM_RECEIVE_BUFFER, "pRSSI:", ",", str); // 获取RSSI
-            if (str != NULL)
-            {
-                signal_quality_monitor[send_cnt - 1].rssi = my_atoi(str);
-                debug_printf("RSSI:%d\r\n", signal_quality_monitor[send_cnt - 1].rssi);
-            }
-            sprintf((char *)RSSI, "RSSI:%d", signal_quality_monitor[send_cnt - 1].rssi);
-            LCD_ShowString(10, 50, RSSI, BLUE);
-            memset(str, 0, sizeof(str));
-
-            match_string(UART_TO_LRM_RECEIVE_BUFFER, "SNR:", ",", str); // 获取SNR
-            if (str != NULL)
-            {
-                signal_quality_monitor[send_cnt - 1].snr = my_atoi(str);
-                debug_printf("SNR:%d\r\n", signal_quality_monitor[send_cnt - 1].snr);
-            }
-            sprintf((char *)SNR, "SNR:%d", signal_quality_monitor[send_cnt - 1].snr);
-            LCD_ShowString(10, 70, SNR, BLUE);
-            memset(str, 0, sizeof(str));
-
-            success_flag = 1;
         }
 
-        /* 丢包率计算与显示 */
-        loss_tolerance = (UpCnt - DnCnt) / UpCnt * 1.00;
-        if (loss_tolerance > 0.1)
+        /* 通信成功率计算 */
+        if (correspond_cnt > 0)
         {
-            HAL_GPIO_WritePin(LedGpio_D8, LedPin_D8, GPIO_PIN_SET);
-            HAL_GPIO_WritePin(LedGpio_D7, LedPin_D7, GPIO_PIN_RESET);
+            correspond_success_rate = Cal_success_rate(correspond_state, correspond_cnt, correspond_full_flag);
+            sprintf((char *)s_correspond_success_rate, "Success rate:%.2f%%", correspond_success_rate * 100.0);
         }
-        else
+
+        /* 丢包率计算 */
+        if (UpCnt > 0)
         {
-            HAL_GPIO_WritePin(LedGpio_D7, LedPin_D7, GPIO_PIN_SET);
-            HAL_GPIO_WritePin(LedGpio_D8, LedPin_D8, GPIO_PIN_RESET);
+            loss_tolerance = (UpCnt - DnCnt) * 1.0 / UpCnt;
+            sprintf((char *)s_loss_tolerance, "Loss tolerance:%.2f%%", loss_tolerance * 100.0);
+            if (loss_tolerance > 0.1)
+            {
+                HAL_GPIO_WritePin(LedGpio_D8, LedPin_D8, GPIO_PIN_SET);
+                HAL_GPIO_WritePin(LedGpio_D7, LedPin_D7, GPIO_PIN_RESET);
+            }
+            else
+            {
+                HAL_GPIO_WritePin(LedGpio_D8, LedPin_D8, GPIO_PIN_RESET);
+                HAL_GPIO_WritePin(LedGpio_D7, LedPin_D7, GPIO_PIN_SET);
+            }
         }
-        sprintf((char *)loss_tolerance_s, "Loss_tolerance:%.2f%%", loss_tolerance * 100.0);
-        LCD_ShowString(10, 90, loss_tolerance_s, BLUE);
 
-        if (send_cnt > 0)
+        /* 平均RSSI计算 */
+        if (RSSI_cnt > 0)
         {
-            /* 通信成功率计算与显示 */
-            signal_quality_monitor[send_cnt - 1].state = 1;
-            correspond_success_rate = Cal_success_rate(signal_quality_monitor, send_cnt, full_flag);
-            sprintf((char *)correspond_success_rate_s, "Success rate:%.2f%%", correspond_success_rate * 100.0);
-            LCD_ShowString(10, 110, correspond_success_rate_s, BLUE);
-
-            /* 平均RSSI计算与显示 */
-            average_RSSI = Cal_average_RSSI(signal_quality_monitor, send_cnt, full_flag);
-            sprintf((char *)average_RSSI_s, "Average RSSI:%.2f", average_RSSI);
-            LCD_ShowString(10, 130, average_RSSI_s, BLUE);
+            average_RSSI = Cal_average_RSSI(RSSI, RSSI_cnt, RSSI_full_flag);
+            sprintf((char *)s_average_RSSI, "Average RSSI:%.2f", average_RSSI);
         }
 
+        /* LCD显示 */
+        LCD_ShowString(10, 50, s_RSSI, BLUE);
+        LCD_ShowString(10, 70, s_SNR, BLUE);
+        LCD_ShowString(10, 90, s_loss_tolerance, BLUE);
+        LCD_ShowString(10, 110, s_correspond_success_rate, BLUE);
+        LCD_ShowString(10, 130, s_average_RSSI, BLUE);
         if (success_flag == 1)
         {
             LCD_ShowString(10, 30, "Communication succeeded", BLUE);
@@ -265,28 +296,17 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *tim_BaseHandle)
     if (tim_BaseHandle->Instance == TIM6)
     {
         tim6_cnt++;
+
         if (tim6_cnt == 60)
         {
-            if (correspond_flag == 0)
+            if (success_flag != 2)
             {
                 debug_printf("send data\r\n");
                 lpusart1_send_data(empty_data, sizeof(empty_data));
                 HAL_GPIO_WritePin(LedGpio_D6, LedPin_D6, GPIO_PIN_RESET);
-                correspond_flag = 1;
                 success_flag = 2;
-                if (send_cnt < 20)
-                {
-                    send_cnt++;
-                }
-                else
-                {
-                    send_cnt = 1;
-                    full_flag = 1; // 计满20次标志位
-                }
-                debug_printf("%d\r\n", send_cnt);
-                total_cnt++;
-                tim6_cnt = 0;
             }
+            tim6_cnt = 0;
         }
     }
 }

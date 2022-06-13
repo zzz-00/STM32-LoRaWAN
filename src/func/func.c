@@ -80,7 +80,7 @@ int my_atoi(uint8_t *str)
     return sum * (flag ? -1 : 1);
 }
 
-double Cal_success_rate(recv_data data[], uint8_t cnt, uint8_t flag)
+double Cal_success_rate(uint8_t data[], uint8_t cnt, uint8_t flag)
 {
     double sum = 0;
     switch (flag)
@@ -89,7 +89,7 @@ double Cal_success_rate(recv_data data[], uint8_t cnt, uint8_t flag)
     {
         for (int i = 0; i < cnt; i++)
         {
-            sum += data[i].state;
+            sum += data[i];
         }
         sum = sum / cnt * 1.0;
     }
@@ -99,7 +99,7 @@ double Cal_success_rate(recv_data data[], uint8_t cnt, uint8_t flag)
     {
         for (int i = 0; i < 20; i++)
         {
-            sum += data[i].state;
+            sum += data[i];
         }
         sum = sum / 20 * 1.0;
     }
@@ -111,7 +111,7 @@ double Cal_success_rate(recv_data data[], uint8_t cnt, uint8_t flag)
     return sum;
 }
 
-double Cal_average_RSSI(recv_data data[], uint8_t cnt, uint8_t flag)
+double Cal_average_RSSI(int data[], uint8_t cnt, uint8_t flag)
 {
     double sum = 0;
     switch (flag)
@@ -120,7 +120,7 @@ double Cal_average_RSSI(recv_data data[], uint8_t cnt, uint8_t flag)
     {
         for (int i = 0; i < cnt; i++)
         {
-            sum += data[i].rssi;
+            sum += data[i];
         }
         sum = sum / cnt * 1.0;
     }
@@ -128,11 +128,11 @@ double Cal_average_RSSI(recv_data data[], uint8_t cnt, uint8_t flag)
     break;
     case 1:
     {
-        for (int i = 0; i < 20; i++)
+        for (int i = 0; i < 10; i++)
         {
-            sum += data[i].rssi;
+            sum += data[i];
         }
-        sum = sum / 20 * 1.0;
+        sum = sum / 10 * 1.0;
     }
 
     break;
