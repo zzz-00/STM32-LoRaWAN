@@ -2,6 +2,7 @@
 #include "usart.h"
 #include "ST7789v.h"
 #include "lorawan_node_driver.h"
+#include <stdio.h>
 
 void Device_Config(void)
 {
@@ -142,3 +143,40 @@ double Cal_average_RSSI(int data[], uint8_t cnt, uint8_t flag)
     }
     return sum;
 }
+
+int LCD_Set_Scroll_Area(uint16_t tfa, uint16_t vsa, uint16_t bta)
+{
+    uint8_t data;
+
+    if (tfa + vsa + bta != 320)
+    {
+        return -1;
+    }
+
+    LCD_WriteCommand(0x33);
+
+    data = tfa >> 8;
+    LCD_WriteData_8bit(data);
+    data = tfa;
+    LCD_WriteData_8bit(data);
+    data = vsa >> 8;
+    LCD_WriteData_8bit(data);
+    data = vsa;
+    LCD_WriteData_8bit(data);
+    data = bta >> 8;
+    LCD_WriteData_8bit(data);
+    data = bta;
+    LCD_WriteData_8bit(data);
+
+    return 0;
+}
+
+void LCD_Set_Scroll_Start_Address(uint16_t vsp)
+{
+
+    LCD_WriteCommand(0x37);
+
+    LCD_WriteData_16bit(vsp / 256);
+    LCD_WriteData_16bit(vsp % 256);
+}
+

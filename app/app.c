@@ -11,6 +11,8 @@
 #include "common.h"
 #include "ST7789v.h"
 
+#define SCROLL_MODE 1
+
 extern DEVICE_MODE_T device_mode;
 extern DEVICE_MODE_T *Device_Mode_str;
 down_list_t *pphead = NULL;
@@ -21,11 +23,12 @@ uint64_t DnCnt = 0;
 uint32_t tim6_cnt = 0;
 uint8_t RSSI_cnt = 0;
 uint8_t correspond_cnt = 0;
+uint8_t cycle_cnt = 0;
 
 uint8_t RSSI_full_flag = 0;
 uint8_t correspond_full_flag = 0;
 uint8_t success_flag = 3;
-uint8_t *p_correspond_flag = NULL;
+uint8_t LCD_mode_change_flag = 1;
 
 uint8_t str[20] = {0};
 int RSSI[10] = {0};
@@ -36,11 +39,13 @@ double loss_tolerance = 0;
 double correspond_success_rate = 0;
 double average_RSSI = 0;
 
+uint8_t LCD_mode = SCROLL_MODE;
 uint8_t s_loss_tolerance[30];
 uint8_t s_correspond_success_rate[30];
 uint8_t s_average_RSSI[30];
 uint8_t s_RSSI[30];
 uint8_t s_SNR[30];
+uint8_t s_scroll_correspond[20][30];
 
 //-----------------Users application--------------------------
 void LoRaWAN_Func_Process(void)
@@ -160,14 +165,14 @@ void LoRaWAN_Func_Process(void)
             else
             {
                 correspond_cnt = 1;
+                cycle_cnt++;
                 correspond_full_flag = 1; // 计满20次标志位
             }
             UpCnt++;
 
             usart2_send_data(UART_TO_LRM_RECEIVE_BUFFER, UART_TO_LRM_RECEIVE_LENGTH);
 
-            p_correspond_flag = find_string(UART_TO_LRM_RECEIVE_BUFFER, "DN");
-            if (p_correspond_flag != NULL) // 检测到下行数据
+            if (find_string(UART_TO_LRM_RECEIVE_BUFFER, "DN") != NULL) // 检测到下行数据
             {
                 /* RSSI计数 */
                 if (RSSI_cnt < 10)
@@ -201,11 +206,13 @@ void LoRaWAN_Func_Process(void)
 
                 DnCnt++;
                 correspond_state[correspond_cnt - 1] = 1;
+                sprintf((char *)s_scroll_correspond[correspond_cnt - 1], "%d Communication succeeded", correspond_cnt + 20 * cycle_cnt);
                 success_flag = 1; // 本次通信成功
             }
             else // 无下行数据
             {
                 correspond_state[correspond_cnt - 1] = 0;
+                sprintf((char *)s_scroll_correspond[correspond_cnt - 1], "%d Communication failed", correspond_cnt + 20 * cycle_cnt);
                 sprintf((char *)s_RSSI, "RSSI:---");
                 sprintf((char *)s_SNR, "SNR:---");
                 success_flag = 0;
@@ -245,22 +252,71 @@ void LoRaWAN_Func_Process(void)
         }
 
         /* LCD显示 */
-        LCD_ShowString(10, 50, s_RSSI, BLUE);
-        LCD_ShowString(10, 70, s_SNR, BLUE);
-        LCD_ShowString(10, 90, s_loss_tolerance, BLUE);
-        LCD_ShowString(10, 110, s_correspond_success_rate, BLUE);
-        LCD_ShowString(10, 130, s_average_RSSI, BLUE);
-        if (success_flag == 1)
+        static int i = 150;
+        switch (LCD_mode)
         {
-            LCD_ShowString(10, 30, "Communication succeeded", BLUE);
+        case SCROLL_MODE:
+        {
+            if (LCD_mode_change_flag == 1 && correspond_cnt > 10)
+            {
+                LCD_Set_Scroll_Area(150, 160, 10);
+                LCD_mode_change_flag = 0;
+            }
+
+            LCD_ShowString(10, 50, s_RSSI, BLUE);
+            LCD_ShowString(10, 70, s_SNR, BLUE);
+            LCD_ShowString(10, 90, s_loss_tolerance, BLUE);
+            LCD_ShowString(10, 110, s_correspond_success_rate, BLUE);
+            LCD_ShowString(10, 130, s_average_RSSI, BLUE);
+            switch (correspond_full_flag)
+            {
+            case 0:
+            {
+                if (correspond_cnt > 0 && correspond_cnt < 11)
+                {
+                    LCD_ShowString(10, 150 + 16 * (correspond_cnt - 1), s_scroll_correspond[correspond_cnt - 1], BLUE);
+                }
+                else
+                {
+                }
+            }
+            break;
+
+            case 1:
+            {
+            }
+            break;
+
+            default:
+                break;
+            }
+
+            if (success_flag == 1)
+            {
+                LCD_ShowString(10, 30, "Communication succeeded", BLUE);
+            }
+            else if (success_flag == 0)
+            {
+                LCD_ShowString(10, 30, "Communication failed", BLUE);
+            }
+            else
+            {
+                LCD_Fill(10, 30, 240, 49, WHITE);
+            }
+
+            if (correspond_cnt > 10 || correspond_full_flag == 1)
+            {
+                LCD_Set_Scroll_Start_Address(i);
+                if (++i > 310)
+                {
+                    i = 150;
+                }
+            }
         }
-        else if (success_flag == 0)
-        {
-            LCD_ShowString(10, 30, "Communication failed", BLUE);
-        }
-        else
-        {
-            LCD_Fill(10, 30, 240, 49, WHITE);
+        break;
+
+        default:
+            break;
         }
     }
     break;
