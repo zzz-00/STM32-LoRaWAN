@@ -26,9 +26,12 @@ uint8_t correspond_cnt = 0;
 uint8_t cycle_cnt = 0;
 
 uint8_t RSSI_full_flag = 0;
-uint8_t correspond_full_flag = 0;
-uint8_t success_flag = 3;
+uint8_t correspond_full_flag = 0; // 通信20次标志位
+uint8_t success_flag = 3;         // 通信标志位
 uint8_t LCD_mode_change_flag = 1;
+
+uint8_t str_select = 0;
+uint8_t str_select_display = 1;
 
 uint8_t str[20] = {0};
 int RSSI[10] = {0};
@@ -45,7 +48,8 @@ uint8_t s_correspond_success_rate[30];
 uint8_t s_average_RSSI[30];
 uint8_t s_RSSI[30];
 uint8_t s_SNR[30];
-uint8_t s_scroll_correspond[20][30];
+uint8_t s_scroll_correspond_0[10][30]; // 滚动显示字符串数组
+uint8_t s_scroll_correspond_1[10][30];
 
 //-----------------Users application--------------------------
 void LoRaWAN_Func_Process(void)
@@ -168,6 +172,14 @@ void LoRaWAN_Func_Process(void)
                 cycle_cnt++;
                 correspond_full_flag = 1; // 计满20次标志位
             }
+            if (correspond_cnt < 11)
+            {
+                str_select = 0;
+            }
+            else
+            {
+                str_select = 1;
+            }
             UpCnt++;
 
             usart2_send_data(UART_TO_LRM_RECEIVE_BUFFER, UART_TO_LRM_RECEIVE_LENGTH);
@@ -205,14 +217,37 @@ void LoRaWAN_Func_Process(void)
                 memset(str, 0, sizeof(str));
 
                 DnCnt++;
+
                 correspond_state[correspond_cnt - 1] = 1;
-                sprintf((char *)s_scroll_correspond[correspond_cnt - 1], "%d Communication succeeded", correspond_cnt + 20 * cycle_cnt);
+                switch (str_select)
+                {
+                case 0:
+                    sprintf((char *)s_scroll_correspond_0[(correspond_cnt - 1) % 10], "%d Communication succeeded", correspond_cnt + 20 * cycle_cnt);
+                    break;
+                case 1:
+                    sprintf((char *)s_scroll_correspond_1[(correspond_cnt - 1) % 10], "%d Communication succeeded", correspond_cnt + 20 * cycle_cnt);
+                    break;
+
+                default:
+                    break;
+                }
                 success_flag = 1; // 本次通信成功
             }
             else // 无下行数据
             {
                 correspond_state[correspond_cnt - 1] = 0;
-                sprintf((char *)s_scroll_correspond[correspond_cnt - 1], "%d Communication failed", correspond_cnt + 20 * cycle_cnt);
+                switch (str_select)
+                {
+                case 0:
+                    sprintf((char *)s_scroll_correspond_0[(correspond_cnt - 1) % 10], "%d Communication failed", correspond_cnt + 20 * cycle_cnt);
+                    break;
+                case 1:
+                    sprintf((char *)s_scroll_correspond_1[(correspond_cnt - 1) % 10], "%d Communication failed", correspond_cnt + 20 * cycle_cnt);
+                    break;
+
+                default:
+                    break;
+                }
                 sprintf((char *)s_RSSI, "RSSI:---");
                 sprintf((char *)s_SNR, "SNR:---");
                 success_flag = 0;
@@ -252,7 +287,8 @@ void LoRaWAN_Func_Process(void)
         }
 
         /* LCD显示 */
-        static int i = 150;
+        static int i = 149;
+        static int display_cnt = 0;
         switch (LCD_mode)
         {
         case SCROLL_MODE:
@@ -261,34 +297,6 @@ void LoRaWAN_Func_Process(void)
             {
                 LCD_Set_Scroll_Area(150, 160, 10);
                 LCD_mode_change_flag = 0;
-            }
-
-            LCD_ShowString(10, 50, s_RSSI, BLUE);
-            LCD_ShowString(10, 70, s_SNR, BLUE);
-            LCD_ShowString(10, 90, s_loss_tolerance, BLUE);
-            LCD_ShowString(10, 110, s_correspond_success_rate, BLUE);
-            LCD_ShowString(10, 130, s_average_RSSI, BLUE);
-            switch (correspond_full_flag)
-            {
-            case 0:
-            {
-                if (correspond_cnt > 0 && correspond_cnt < 11)
-                {
-                    LCD_ShowString(10, 150 + 16 * (correspond_cnt - 1), s_scroll_correspond[correspond_cnt - 1], BLUE);
-                }
-                else
-                {
-                }
-            }
-            break;
-
-            case 1:
-            {
-            }
-            break;
-
-            default:
-                break;
             }
 
             if (success_flag == 1)
@@ -303,13 +311,48 @@ void LoRaWAN_Func_Process(void)
             {
                 LCD_Fill(10, 30, 240, 49, WHITE);
             }
+            LCD_ShowString(10, 50, s_RSSI, BLUE);
+            LCD_ShowString(10, 70, s_SNR, BLUE);
+            LCD_ShowString(10, 90, s_loss_tolerance, BLUE);
+            LCD_ShowString(10, 110, s_correspond_success_rate, BLUE);
+            LCD_ShowString(10, 130, s_average_RSSI, BLUE);
+            
+            if (correspond_cnt > 0 && correspond_cnt < 11 && correspond_full_flag == 0)
+            {
+                LCD_ShowString(10, 150 + 16 * (correspond_cnt - 1), s_scroll_correspond_0[(correspond_cnt - 1) % 10], BLUE);
+            }
+            else
+            {
+                if ((i - 150) % 16 == 8)
+                {
+                    LCD_Fill(10, 150 + 16 * (display_cnt % 10), 240, 150 + 16 * (display_cnt % 10 + 1) - 1, WHITE);
+                    switch (str_select_display)
+                    {
+                    case 0:
+                        LCD_ShowString(10, 150 + 16 * (display_cnt % 10), s_scroll_correspond_0[display_cnt % 10], BLUE);
+                        break;
+                    case 1:
+                        LCD_ShowString(10, 150 + 16 * (display_cnt % 10), s_scroll_correspond_1[display_cnt % 10], BLUE);
+                        break;
 
+                    default:
+                        break;
+                    }
+                    display_cnt++;
+
+                    if (display_cnt == 10)
+                    {
+                        str_select_display = !str_select_display;
+                        display_cnt = 0;
+                    }
+                }
+            }
             if (correspond_cnt > 10 || correspond_full_flag == 1)
             {
                 LCD_Set_Scroll_Start_Address(i);
-                if (++i > 310)
+                if (++i > 309)
                 {
-                    i = 150;
+                    i = 149;
                 }
             }
         }
