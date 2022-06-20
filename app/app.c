@@ -11,8 +11,6 @@
 #include "common.h"
 #include "ST7789v.h"
 
-#define SCROLL_MODE 1
-
 extern DEVICE_MODE_T device_mode;
 extern DEVICE_MODE_T *Device_Mode_str;
 down_list_t *pphead = NULL;
@@ -28,7 +26,8 @@ uint8_t cycle_cnt = 0;
 uint8_t RSSI_full_flag = 0;
 uint8_t correspond_full_flag = 0; // 通信20次标志位
 uint8_t success_flag = 3;         // 通信标志位
-uint8_t LCD_mode_change_flag = 1;
+uint8_t LCD_mode_change_flag = 0;
+uint8_t LineChart_Update_flag = 0;
 
 uint8_t str_select = 0;
 uint8_t str_select_display = 1;
@@ -48,8 +47,8 @@ uint8_t s_correspond_success_rate[30];
 uint8_t s_average_RSSI[30];
 uint8_t s_RSSI[30];
 uint8_t s_SNR[30];
-uint8_t s_scroll_correspond_0[10][30]; // 滚动显示字符串数组
-uint8_t s_scroll_correspond_1[10][30];
+uint8_t s_scroll_correspond_0[10][30] = {0}; // 滚动显示字符串数组
+uint8_t s_scroll_correspond_1[10][30] = {0};
 
 //-----------------Users application--------------------------
 void LoRaWAN_Func_Process(void)
@@ -182,7 +181,7 @@ void LoRaWAN_Func_Process(void)
             }
             UpCnt++;
 
-            usart2_send_data(UART_TO_LRM_RECEIVE_BUFFER, UART_TO_LRM_RECEIVE_LENGTH);
+            // usart2_send_data(UART_TO_LRM_RECEIVE_BUFFER, UART_TO_LRM_RECEIVE_LENGTH);
 
             if (find_string(UART_TO_LRM_RECEIVE_BUFFER, "DN") != NULL) // 检测到下行数据
             {
@@ -194,6 +193,7 @@ void LoRaWAN_Func_Process(void)
                 else
                 {
                     RSSI_cnt = 1;
+                    LineChart_Update_flag = 1;
                     RSSI_full_flag = 1; // 计满10次标志位
                 }
 
@@ -202,7 +202,7 @@ void LoRaWAN_Func_Process(void)
                 if (str[0] != '\0')
                 {
                     RSSI[RSSI_cnt - 1] = my_atoi(str);
-                    debug_printf("RSSI:%d\r\n", RSSI[RSSI_cnt - 1]);
+                    // debug_printf("RSSI:%d\r\n", RSSI[RSSI_cnt - 1]);
                 }
                 sprintf((char *)s_RSSI, "RSSI:%d", RSSI[RSSI_cnt - 1]);
                 memset(str, 0, sizeof(str));
@@ -211,7 +211,7 @@ void LoRaWAN_Func_Process(void)
                 if (str[0] != '\0')
                 {
                     SNR = my_atoi(str);
-                    debug_printf("SNR:%d\r\n", SNR);
+                    // debug_printf("SNR:%d\r\n", SNR);
                 }
                 sprintf((char *)s_SNR, "SNR:%d", SNR);
                 memset(str, 0, sizeof(str));
@@ -293,10 +293,22 @@ void LoRaWAN_Func_Process(void)
         {
         case SCROLL_MODE:
         {
-            if (LCD_mode_change_flag == 1 && correspond_cnt > 10)
+            if (LCD_mode_change_flag == 1)
+            {
+                LCD_Fill(0, 150, 240, 320, WHITE);
+                if (s_scroll_correspond_1[0][0] == '\0')
+                {
+                    for (int i = 0; i < correspond_cnt; i++)
+                    {
+                        LCD_ShowString(10, 150 + 16 * i, s_scroll_correspond_0[i], BLUE);
+                    }
+                }
+                LCD_mode_change_flag = 0;
+            }
+
+            if (s_scroll_correspond_1[0][0] != '\0')
             {
                 LCD_Set_Scroll_Area(150, 160, 10);
-                LCD_mode_change_flag = 0;
             }
 
             if (success_flag == 1)
@@ -316,7 +328,7 @@ void LoRaWAN_Func_Process(void)
             LCD_ShowString(10, 90, s_loss_tolerance, BLUE);
             LCD_ShowString(10, 110, s_correspond_success_rate, BLUE);
             LCD_ShowString(10, 130, s_average_RSSI, BLUE);
-            
+
             if (correspond_cnt > 0 && correspond_cnt < 11 && correspond_full_flag == 0)
             {
                 LCD_ShowString(10, 150 + 16 * (correspond_cnt - 1), s_scroll_correspond_0[(correspond_cnt - 1) % 10], BLUE);
@@ -347,13 +359,58 @@ void LoRaWAN_Func_Process(void)
                     }
                 }
             }
-            if (correspond_cnt > 10 || correspond_full_flag == 1)
+            if (s_scroll_correspond_1[0][0] != '\0' || correspond_full_flag == 1)
             {
                 LCD_Set_Scroll_Start_Address(i);
                 if (++i > 309)
                 {
                     i = 149;
                 }
+            }
+        }
+        break;
+
+        case DYNAMIC_CURVE:
+        {
+            if (LCD_mode_change_flag == 1)
+            {
+                LCD_Set_Scroll_Area(320, 0, 0);
+                Draw_background();
+                LCD_mode_change_flag = 0;
+            }
+
+            if (success_flag == 1)
+            {
+                LCD_ShowString(10, 30, "Communication succeeded", BLUE);
+            }
+            else if (success_flag == 0)
+            {
+                LCD_ShowString(10, 30, "Communication failed", BLUE);
+            }
+            else
+            {
+                LCD_Fill(10, 30, 240, 49, WHITE);
+            }
+            LCD_ShowString(10, 50, s_RSSI, BLUE);
+            LCD_ShowString(10, 70, s_SNR, BLUE);
+            LCD_ShowString(10, 90, s_loss_tolerance, BLUE);
+            LCD_ShowString(10, 110, s_correspond_success_rate, BLUE);
+            LCD_ShowString(10, 130, s_average_RSSI, BLUE);
+
+            if (LineChart_Update_flag)
+            {
+                Draw_LineChart(RSSI);
+                LineChart_Update_flag = 0;
+            }
+        }
+        break;
+
+        case MAP:
+        {
+            if (LCD_mode_change_flag == 1)
+            {
+                LCD_Fill(0, 150, 240, 320, WHITE);
+                LCD_mode_change_flag = 0;
             }
         }
         break;

@@ -2,6 +2,7 @@
 #include "gpio.h"
 #include "usart.h"
 #include "XPT2046.h"
+#include "app.h"
 //#include "lcd_app.h"
 
 KEY App_Key;
@@ -9,6 +10,10 @@ KEY *App_Key_str = &App_Key;
 extern DEVICE_MODE_T *Device_Mode_str;
 extern uint8_t LCD_EN;
 extern Pen_Holder Pen_Point;
+
+extern DEVICE_MODE_T device_mode;
+extern uint8_t LCD_mode_change_flag;
+extern uint8_t LCD_mode;
 
 /**
  * @brief		MCU引脚中断回调函数
@@ -49,6 +54,20 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
                 // Touch_Key(Pen_Point.X0,Pen_Point.Y0);
             }
 
+            if (device_mode == PRO_TRAINING_MODE)
+            {
+                if (LCD_mode < 3)
+                {
+                    debug_printf("mode change\r\n");
+                    LCD_mode++;
+                }
+                else
+                {
+                    LCD_mode = 1;
+                }
+                LCD_mode_change_flag = 1;
+            }
+            
             __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_0);
             delay_10ms(15); //???
             HAL_NVIC_EnableIRQ(EXTI0_IRQn);

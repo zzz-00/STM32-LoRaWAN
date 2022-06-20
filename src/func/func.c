@@ -180,3 +180,107 @@ void LCD_Set_Scroll_Start_Address(uint16_t vsp)
     LCD_WriteData_16bit(vsp % 256);
 }
 
+void Draw_background(void)
+{
+    LCD_Fill(0, 150, 240, 320, WHITE);
+    LCD_DrawRectangle(35, 150, 235, 300, BLUE);
+    // 画列点
+    for (uint16_t x = 85; x < 235; x += 50)
+    {
+        for (uint16_t y = 150; y < 300; y += 10)
+        {
+            LCD_DrawPoint(x, y, 1, BLUE);
+        }
+    }
+    // 画行点
+    for (uint16_t y = 200; y < 300; y += 50)
+    {
+        for (uint16_t x = 35; x < 235; x += 10)
+        {
+            LCD_DrawPoint(x, y, 1, BLUE);
+        }
+    }
+    LCD_ShowString(2, 150, "---", BLUE);
+    LCD_ShowString(2, 196, "---", BLUE);
+    LCD_ShowString(2, 246, "---", BLUE);
+    LCD_ShowString(2, 296, "---", BLUE);
+    LCD_ShowString(35, 301, "0", BLUE);
+    LCD_ShowString(131, 301, "5", BLUE);
+    LCD_ShowString(223, 301, "10", BLUE);
+}
+
+void Clear_Point(int num)
+{
+    uint16_t lie = 0;
+    for (lie = 151; lie < 300; lie++)
+    {
+        LCD_DrawPoint(num, lie, 1, WHITE);
+    }
+    if (!((num - 35) % 50))
+    {
+        for (lie = 150; lie < 300; lie += 10)
+        {
+            LCD_DrawPoint(num, lie, 1, BLUE);
+        }
+    }
+    if (!((num - 35) % 10))
+    {
+        for (lie = 200; lie < 300; lie += 50)
+        {
+            LCD_DrawPoint(num, lie, 1, BLUE);
+        }
+    }
+}
+
+void Draw_LineChart(int data[])
+{
+    uint8_t str[10];
+    int max = data[0];
+    int min = data[0];
+    // float height = 0;
+    float height = 0;
+    int top = 0;
+    int bottom = 0;
+    int position = 150;
+    int x = 0, y = 0, x0 = 55, y0 = 0;
+    for (int i = 0; i < 10; i++)
+    {
+        if (data[i] > max)
+        {
+            max = data[i];
+        }
+        if (data[i] < min)
+        {
+            min = data[i];
+        }
+    }
+
+    debug_printf("max:%d min:%d \r\n", max, min);
+    top = max;
+    bottom = min;
+    height = -(150 / (top - bottom));
+    LCD_Fill(0, 150, 34, 320, WHITE);
+    sprintf((char *)str, "%d", top);
+    LCD_ShowString(2, 150, str, BLUE);
+    sprintf((char *)str, "%d", top + 50.0 / height * 1);
+    LCD_ShowString(2, 196, str, BLUE);
+    sprintf((char *)str, "%d", top + 50.0 / height * 2);
+    LCD_ShowString(2, 246, str, BLUE);
+    sprintf((char *)str, "%d", top + 50.0 / height * 3);
+    LCD_ShowString(2, 296, str, BLUE);
+
+    y0 = (int)(position + (data[0] - top) * height);
+    debug_printf("%d %d %.2f\r\n", data[0], y0, height);
+    for (int i = 36; i < 235; i++)
+    {
+        Clear_Point(i);
+    }
+    for (int i = 1; i < 10; i++)
+    {
+        x = 55 + i * 20;
+        y = (int)(position + (data[i] - top) * height);
+        LCD_DrawLine(x0, y0, x, y, BLUE);
+        x0 = x;
+        y0 = y;
+    }
+}
