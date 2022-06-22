@@ -2,6 +2,8 @@
 #define __FUNC_H__
 #include "stm32l4xx_hal.h"
 
+static uint32_t prngState = 0;
+
 void Device_Config(void);
 int my_atoi(uint8_t *);
 double Cal_success_rate(uint8_t data[], uint8_t cnt, uint8_t flag);
@@ -11,6 +13,9 @@ void LCD_Set_Scroll_Start_Address(uint16_t vsp);
 void Draw_background(void);
 void Clear_Point(int num);
 void Draw_LineChart(int data[]);
-void Map(int RSSI, uint32_t cnt);
+uint32_t init_rand(uint32_t seed);
+uint32_t _rand(void);
+uint32_t rand_range(uint32_t min, uint32_t max);
+void Map(int RSSI);
 
 #endif

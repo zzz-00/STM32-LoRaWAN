@@ -308,24 +308,106 @@ void Draw_LineChart(int data[])
     }
 }
 
-void Map(int RSSI, uint32_t cnt)
+/*********************************************************************
+ * @fn      init_rand
+ *
+ * @brief   Seed pseudo-random number generator
+ *
+ * @param   seed An integer value to be used as seed by the pseudo-random number generator
+ *
+ * @return  Error code
+ */
+uint32_t init_rand(uint32_t seed)
+{
+    // Seed the pseudo-random number generator
+    prngState += seed;
+
+    // Successful processing
+    return SUCCESS;
+}
+
+/*********************************************************************
+ * @fn      _rand
+ *
+ * @brief   Get a random value
+ *
+ * @param   void
+ *
+ * @return  Random value
+ */
+uint32_t _rand(void)
+{
+    uint32_t value;
+
+    // Use a linear congruential generator (LCG) to update the state of the PRNG
+    prngState *= 1103515245;
+    prngState += 12345;
+    value = (prngState >> 16) & 0x07FF;
+
+    prngState *= 1103515245;
+    prngState += 12345;
+    value <<= 10;
+    value |= (prngState >> 16) & 0x03FF;
+
+    prngState *= 1103515245;
+    prngState += 12345;
+    value <<= 10;
+    value |= (prngState >> 16) & 0x03FF;
+
+    // Return the random value
+    return value;
+}
+
+/*********************************************************************
+ * @fn      rand_range
+ *
+ * @brief   Get a random value in the specified range
+ *
+ *
+ * @param   min Lower bound
+ *
+ * @param   max Upper bound
+ *
+ *
+ * @return  Random value in the specified range
+ */
+uint32_t rand_range(uint32_t min, uint32_t max)
+{
+    uint32_t value;
+
+    // Valid parameters?
+    if (max > min)
+    {
+        // Pick up a random value in the given range
+        value = min + (_rand() % (max - min + 1));
+    }
+    else
+    {
+        // Use default value
+        value = min;
+    }
+
+    // Return the random value
+    return value;
+}
+
+void Map(int RSSI)
 {
     int random;
     uint16_t color;
     static uint16_t x = 120;
     static uint16_t y = 230;
 
-    srand(cnt);
-    random = rand() % 4;
-    debug_printf("%d\r\n", rand());
+    random = rand_range(0, 3); // 线性取余法
+    debug_printf("%d\r\n", random);
 
     switch (random)
     {
     case 0:
     {
-        if (x < 220)
+        if (x < 225)
         {
-            x += 10;
+            x += 5;
         }
         else
         {
@@ -336,9 +418,9 @@ void Map(int RSSI, uint32_t cnt)
 
     case 1:
     {
-        if (x > 20)
+        if (x > 15)
         {
-            x -= 10;
+            x -= 5;
         }
         else
         {
@@ -349,9 +431,9 @@ void Map(int RSSI, uint32_t cnt)
 
     case 2:
     {
-        if (y < 300)
+        if (y < 305)
         {
-            y += 10;
+            y += 5;
         }
         else
         {
@@ -362,9 +444,9 @@ void Map(int RSSI, uint32_t cnt)
 
     case 3:
     {
-        if (y > 160)
+        if (y > 155)
         {
-            y -= 10;
+            y -= 5;
         }
         else
         {
@@ -390,6 +472,6 @@ void Map(int RSSI, uint32_t cnt)
         color = RED;
     }
 
-    debug_printf("x:%d y:%d color:%d\r\n", x, y, color);
-    LCD_DrawPoint(x, y, 2, color);
+    debug_printf("x:%d y:%d", x, y);
+    LCD_DrawPoint(x, y, 3, color);
 }

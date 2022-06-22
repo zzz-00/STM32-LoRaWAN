@@ -390,6 +390,7 @@ void LoRaWAN_Func_Process(void)
             if (LCD_mode_change_flag == 1)
             {
                 LCD_Fill(0, 150, 240, 320, WHITE);
+                init_rand(HAL_GetTick());
                 LCD_mode_change_flag = 0;
             }
 
@@ -397,7 +398,7 @@ void LoRaWAN_Func_Process(void)
 
             if (Map_Update_flag)
             {
-                Map(RSSI[RSSI_cnt - 1], HAL_GetTick());
+                Map(RSSI[RSSI_cnt - 1]);
                 Map_Update_flag = 0;
             }
         }
