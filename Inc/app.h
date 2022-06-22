@@ -36,5 +36,6 @@ typedef struct
 
 void LoRaWAN_Func_Process(void);
 void LoRaWAN_Borad_Info_Print(void);
+void LCD_Information_display(uint8_t flag);
 
 #endif

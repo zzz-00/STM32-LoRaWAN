@@ -22,12 +22,15 @@ uint32_t tim6_cnt = 0;
 uint8_t RSSI_cnt = 0;
 uint8_t correspond_cnt = 0;
 uint8_t cycle_cnt = 0;
+uint8_t SNR_cnt = 0;
 
 uint8_t RSSI_full_flag = 0;
 uint8_t correspond_full_flag = 0; // 通信20次标志位
 uint8_t success_flag = 3;         // 通信标志位
+uint8_t SNR_flag = 0;
 uint8_t LCD_mode_change_flag = 0;
 uint8_t LineChart_Update_flag = 0;
+uint8_t Map_Update_flag = 0;
 
 uint8_t str_select = 0;
 uint8_t str_select_display = 1;
@@ -193,7 +196,7 @@ void LoRaWAN_Func_Process(void)
                 else
                 {
                     RSSI_cnt = 1;
-                    LineChart_Update_flag = 1;
+                    // LineChart_Update_flag = 1;
                     RSSI_full_flag = 1; // 计满10次标志位
                 }
 
@@ -202,6 +205,10 @@ void LoRaWAN_Func_Process(void)
                 if (str[0] != '\0')
                 {
                     RSSI[RSSI_cnt - 1] = my_atoi(str);
+                    if (LCD_mode == MAP)
+                    {
+                        Map_Update_flag = 1;
+                    }
                     // debug_printf("RSSI:%d\r\n", RSSI[RSSI_cnt - 1]);
                 }
                 sprintf((char *)s_RSSI, "RSSI:%d", RSSI[RSSI_cnt - 1]);
@@ -211,6 +218,10 @@ void LoRaWAN_Func_Process(void)
                 if (str[0] != '\0')
                 {
                     SNR = my_atoi(str);
+                    if (SNR < 3)
+                    {
+                        SNR_flag = 1;
+                    }
                     // debug_printf("SNR:%d\r\n", SNR);
                 }
                 sprintf((char *)s_SNR, "SNR:%d", SNR);
@@ -231,6 +242,7 @@ void LoRaWAN_Func_Process(void)
                 default:
                     break;
                 }
+                LineChart_Update_flag = 1;
                 success_flag = 1; // 本次通信成功
             }
             else // 无下行数据
@@ -311,23 +323,7 @@ void LoRaWAN_Func_Process(void)
                 LCD_Set_Scroll_Area(150, 160, 10);
             }
 
-            if (success_flag == 1)
-            {
-                LCD_ShowString(10, 30, "Communication succeeded", BLUE);
-            }
-            else if (success_flag == 0)
-            {
-                LCD_ShowString(10, 30, "Communication failed", BLUE);
-            }
-            else
-            {
-                LCD_Fill(10, 30, 240, 49, WHITE);
-            }
-            LCD_ShowString(10, 50, s_RSSI, BLUE);
-            LCD_ShowString(10, 70, s_SNR, BLUE);
-            LCD_ShowString(10, 90, s_loss_tolerance, BLUE);
-            LCD_ShowString(10, 110, s_correspond_success_rate, BLUE);
-            LCD_ShowString(10, 130, s_average_RSSI, BLUE);
+            LCD_Information_display(success_flag);
 
             if (correspond_cnt > 0 && correspond_cnt < 11 && correspond_full_flag == 0)
             {
@@ -379,23 +375,7 @@ void LoRaWAN_Func_Process(void)
                 LCD_mode_change_flag = 0;
             }
 
-            if (success_flag == 1)
-            {
-                LCD_ShowString(10, 30, "Communication succeeded", BLUE);
-            }
-            else if (success_flag == 0)
-            {
-                LCD_ShowString(10, 30, "Communication failed", BLUE);
-            }
-            else
-            {
-                LCD_Fill(10, 30, 240, 49, WHITE);
-            }
-            LCD_ShowString(10, 50, s_RSSI, BLUE);
-            LCD_ShowString(10, 70, s_SNR, BLUE);
-            LCD_ShowString(10, 90, s_loss_tolerance, BLUE);
-            LCD_ShowString(10, 110, s_correspond_success_rate, BLUE);
-            LCD_ShowString(10, 130, s_average_RSSI, BLUE);
+            LCD_Information_display(success_flag);
 
             if (LineChart_Update_flag)
             {
@@ -411,6 +391,14 @@ void LoRaWAN_Func_Process(void)
             {
                 LCD_Fill(0, 150, 240, 320, WHITE);
                 LCD_mode_change_flag = 0;
+            }
+
+            LCD_Information_display(success_flag);
+
+            if (Map_Update_flag)
+            {
+                Map(RSSI[RSSI_cnt - 1], HAL_GetTick());
+                Map_Update_flag = 0;
             }
         }
         break;
@@ -452,7 +440,18 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *tim_BaseHandle)
     if (tim_BaseHandle->Instance == TIM6)
     {
         tim6_cnt++;
-
+        if (SNR_flag)
+        {
+            SNR_cnt++;
+            HAL_GPIO_TogglePin(LedGpio_D11, LedPin_D11);
+            if (SNR_cnt > 4)
+            {
+                SNR_cnt = 0;
+                SNR_flag = 0;
+                HAL_GPIO_TogglePin(LedGpio_D11, LedPin_D11);
+                HAL_GPIO_WritePin(LedGpio_D11, LedPin_D11, GPIO_PIN_SET);
+            }
+        }
         if (tim6_cnt == 60)
         {
             if (success_flag != 2)
@@ -465,4 +464,25 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *tim_BaseHandle)
             tim6_cnt = 0;
         }
     }
+}
+
+void LCD_Information_display(uint8_t flag)
+{
+    if (flag == 1)
+    {
+        LCD_ShowString(10, 30, "Communication succeeded", BLUE);
+    }
+    else if (flag == 0)
+    {
+        LCD_ShowString(10, 30, "Communication failed", BLUE);
+    }
+    else
+    {
+        LCD_Fill(10, 30, 240, 49, WHITE);
+    }
+    LCD_ShowString(10, 50, s_RSSI, BLUE);
+    LCD_ShowString(10, 70, s_SNR, BLUE);
+    LCD_ShowString(10, 90, s_loss_tolerance, BLUE);
+    LCD_ShowString(10, 110, s_correspond_success_rate, BLUE);
+    LCD_ShowString(10, 130, s_average_RSSI, BLUE);
 }

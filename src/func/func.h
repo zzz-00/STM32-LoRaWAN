@@ -11,5 +11,6 @@ void LCD_Set_Scroll_Start_Address(uint16_t vsp);
 void Draw_background(void);
 void Clear_Point(int num);
 void Draw_LineChart(int data[]);
+void Map(int RSSI, uint32_t cnt);
 
 #endif

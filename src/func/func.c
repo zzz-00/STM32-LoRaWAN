@@ -3,6 +3,7 @@
 #include "ST7789v.h"
 #include "lorawan_node_driver.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 void Device_Config(void)
 {
@@ -14,7 +15,6 @@ void Device_Config(void)
 
     // 清除屏幕
     LCD_Clear(WHITE);
-    LCD_ShowString(10, 10, "DevEui:009569000000F586", BLUE);
 
     // 配置为ClassA
     nodeCmdConfig("AT+CLASS=0");
@@ -51,6 +51,29 @@ void Device_Config(void)
     debug_printf("AT+ADR=0\r\n");
     HAL_Delay(100);
     debug_printf("%s\r\n", UART_TO_LRM_RECEIVE_BUFFER);
+
+    // 获取设备DevEui
+    uint8_t str[30] = {0};
+    uint8_t dsp[30] = "DevEui:";
+    int j = 7;
+    nodeCmdConfig("AT+DEVEUI?");
+    debug_printf("AT+DEVEUI?\r\n");
+    HAL_Delay(100);
+    match_string(UART_TO_LRM_RECEIVE_BUFFER, "DEVEUI:", "OK", str);
+    if (str[0] != '\0')
+    {
+        for (int i = 0; i < sizeof(str); i++)
+        {
+            if (str[i] != 0x20 && str[i] != 0x0D && str[i] != 0x0A)
+            {
+                dsp[j] = str[i];
+                j++;
+            }
+        }
+    }
+    dsp[j] = '\0';
+    debug_printf("%s\r\n", dsp);
+    LCD_ShowString(10, 10, dsp, BLUE);
 }
 
 int my_atoi(uint8_t *str)
@@ -262,11 +285,11 @@ void Draw_LineChart(int data[])
     LCD_Fill(0, 150, 34, 320, WHITE);
     sprintf((char *)str, "%d", top);
     LCD_ShowString(2, 150, str, BLUE);
-    sprintf((char *)str, "%d", top + 50.0 / height * 1);
+    sprintf((char *)str, "%d", (int)(top + 50.0 / height * 1 - 0.5));
     LCD_ShowString(2, 196, str, BLUE);
-    sprintf((char *)str, "%d", top + 50.0 / height * 2);
+    sprintf((char *)str, "%d", (int)(top + 50.0 / height * 2 - 0.5));
     LCD_ShowString(2, 246, str, BLUE);
-    sprintf((char *)str, "%d", top + 50.0 / height * 3);
+    sprintf((char *)str, "%d", (int)(top + 50.0 / height * 3 - 0.5));
     LCD_ShowString(2, 296, str, BLUE);
 
     y0 = (int)(position + (data[0] - top) * height);
@@ -283,4 +306,90 @@ void Draw_LineChart(int data[])
         x0 = x;
         y0 = y;
     }
+}
+
+void Map(int RSSI, uint32_t cnt)
+{
+    int random;
+    uint16_t color;
+    static uint16_t x = 120;
+    static uint16_t y = 230;
+
+    srand(cnt);
+    random = rand() % 4;
+    debug_printf("%d\r\n", rand());
+
+    switch (random)
+    {
+    case 0:
+    {
+        if (x < 220)
+        {
+            x += 10;
+        }
+        else
+        {
+            x = x;
+        }
+    }
+    break;
+
+    case 1:
+    {
+        if (x > 20)
+        {
+            x -= 10;
+        }
+        else
+        {
+            x = x;
+        }
+    }
+    break;
+
+    case 2:
+    {
+        if (y < 300)
+        {
+            y += 10;
+        }
+        else
+        {
+            y = y;
+        }
+    }
+    break;
+
+    case 3:
+    {
+        if (y > 160)
+        {
+            y -= 10;
+        }
+        else
+        {
+            y = y;
+        }
+    }
+    break;
+
+    default:
+        break;
+    }
+
+    if (RSSI < -19 && RSSI > -85)
+    {
+        color = GREEN;
+    }
+    else if (RSSI < -84 && RSSI > -100)
+    {
+        color = YELLOW;
+    }
+    else
+    {
+        color = RED;
+    }
+
+    debug_printf("x:%d y:%d color:%d\r\n", x, y, color);
+    LCD_DrawPoint(x, y, 2, color);
 }
