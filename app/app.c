@@ -16,6 +16,7 @@ extern DEVICE_MODE_T *Device_Mode_str;
 down_list_t *pphead = NULL;
 
 uint8_t empty_data[9] = {0xAA, 0, 0, 0, 0, 0, 0, 0, 0x0F};
+int8_t data[10];
 uint64_t UpCnt = 0;
 uint64_t DnCnt = 0;
 uint32_t tim6_cnt = 0;
@@ -38,6 +39,7 @@ uint8_t str_select_display = 1;
 uint8_t str[20] = {0};
 int RSSI[10] = {0};
 int SNR = 0;
+int RSSI_Display[10] = {0};
 uint8_t correspond_state[20] = {0};
 
 double loss_tolerance = 0;
@@ -184,9 +186,8 @@ void LoRaWAN_Func_Process(void)
             }
             UpCnt++;
 
-            // usart2_send_data(UART_TO_LRM_RECEIVE_BUFFER, UART_TO_LRM_RECEIVE_LENGTH);
-
-            if (find_string(UART_TO_LRM_RECEIVE_BUFFER, "DN") != NULL) // 检测到下行数据
+            Read_Hex(UART_TO_LRM_RECEIVE_BUFFER, UART_TO_LRM_RECEIVE_LENGTH, (uint8_t *)data);
+            if (data[0] == -64) // 通信成功
             {
                 /* RSSI计数 */
                 if (RSSI_cnt < 10)
@@ -196,38 +197,37 @@ void LoRaWAN_Func_Process(void)
                 else
                 {
                     RSSI_cnt = 1;
-                    // LineChart_Update_flag = 1;
                     RSSI_full_flag = 1; // 计满10次标志位
                 }
 
                 /* 下行数据处理 */
-                match_string(UART_TO_LRM_RECEIVE_BUFFER, "pRSSI:", ",", str); // 获取RSSI
-                if (str[0] != '\0')
+                RSSI[RSSI_cnt - 1] = data[2]; // RSSI
+                if (!RSSI_full_flag)
                 {
-                    RSSI[RSSI_cnt - 1] = my_atoi(str);
-                    if (LCD_mode == MAP)
+                    RSSI_Display[RSSI_cnt - 1] = data[2];
+                }
+                else
+                {
+                    for (int i = 0; i < 9; i++)
                     {
-                        Map_Update_flag = 1;
+                        RSSI_Display[i] = RSSI_Display[i + 1];
                     }
-                    // debug_printf("RSSI:%d\r\n", RSSI[RSSI_cnt - 1]);
+                    RSSI_Display[9] = data[2];
+                }
+                if (LCD_mode == MAP)
+                {
+                    Map_Update_flag = 1;
                 }
                 sprintf((char *)s_RSSI, "RSSI:%d", RSSI[RSSI_cnt - 1]);
                 memset(str, 0, sizeof(str));
 
-                match_string(UART_TO_LRM_RECEIVE_BUFFER, "SNR:", ",", str); // 获取SNR
-                if (str[0] != '\0')
+                SNR = data[1]; // SNR
+                if (SNR < 3)
                 {
-                    SNR = my_atoi(str);
-                    if (SNR < 3)
-                    {
-                        SNR_flag = 1;
-                    }
-                    // debug_printf("SNR:%d\r\n", SNR);
+                    SNR_flag = 1;
                 }
                 sprintf((char *)s_SNR, "SNR:%d", SNR);
                 memset(str, 0, sizeof(str));
-
-                DnCnt++;
 
                 correspond_state[correspond_cnt - 1] = 1;
                 switch (str_select)
@@ -242,10 +242,11 @@ void LoRaWAN_Func_Process(void)
                 default:
                     break;
                 }
+                DnCnt++;
                 LineChart_Update_flag = 1;
                 success_flag = 1; // 本次通信成功
             }
-            else // 无下行数据
+            else
             {
                 correspond_state[correspond_cnt - 1] = 0;
                 switch (str_select)
@@ -379,7 +380,7 @@ void LoRaWAN_Func_Process(void)
 
             if (LineChart_Update_flag)
             {
-                Draw_LineChart(RSSI);
+                Draw_LineChart(RSSI_Display);
                 LineChart_Update_flag = 0;
             }
         }

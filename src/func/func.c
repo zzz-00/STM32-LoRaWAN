@@ -76,32 +76,14 @@ void Device_Config(void)
     LCD_ShowString(10, 10, dsp, BLUE);
 }
 
-int my_atoi(uint8_t *str)
+void Read_Hex(uint8_t buffer[], uint16_t len, uint8_t *data)
 {
-    char flag = 0;
-    int sum = 0;
-
-    while (*str == ' ')
+    int j = 0;
+    for (int i = 0; i < len; i++)
     {
-        str++;
+        data[j] = buffer[i];
+        j++;
     }
-
-    if (*str == '-' || *str == '+')
-    {
-        if (*str == '-')
-        {
-            flag = 1;
-        }
-        str++;
-    }
-
-    while (*str >= '0' && *str <= '9')
-    {
-        sum = sum * 10 + *str - '0';
-        str++;
-    }
-
-    return sum * (flag ? -1 : 1);
 }
 
 double Cal_success_rate(uint8_t data[], uint8_t cnt, uint8_t flag)
@@ -260,7 +242,6 @@ void Draw_LineChart(int data[])
     uint8_t str[10];
     int max = data[0];
     int min = data[0];
-    // float height = 0;
     float height = 0;
     int top = 0;
     int bottom = 0;
