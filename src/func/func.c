@@ -5,6 +5,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+uint8_t position[45][33] = {0};
+uint16_t x = 22;
+uint16_t y = 16;
+uint16_t color;
+
 void Device_Config(void)
 {
     // ÃðµÆ
